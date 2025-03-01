@@ -2,6 +2,9 @@ import customtkinter as ctk
 from tkinter import messagebox
 from models.pedido import Pedido
 from utils.pdf_generator import gerar_pdf
+from utils.database import salvar_pedido
+from utils.database import listar_pedidos
+import random
 import os
 
 # Configuração do tema do customtkinter
@@ -236,8 +239,16 @@ class PedidoApp:
 
         confirmar = messagebox.askyesno("Confirmar", "Deseja finalizar a comanda?")
         if confirmar:
+            # Gerar um número de pedido único
+            numero_pedido = f"PED{random.randint(1000, 9999)}"
+
+            # Salvar o pedido no banco de dados
+            for pedido in self.pedidos:
+                salvar_pedido(pedido, numero_pedido)
+
+            # Gerar o PDF
             gerar_pdf(self.pedidos)
-            messagebox.showinfo("Sucesso", "Comanda finalizada e PDF gerado com sucesso!")
+            messagebox.showinfo("Sucesso", f"Comanda finalizada e PDF gerado com sucesso! Número do pedido: {numero_pedido}")
             os.startfile("pedido.pdf")
             self.limpar_campos()
 
@@ -248,6 +259,34 @@ class PedidoApp:
 
         # Atualiza a interface para refletir a limpeza
         self.atualizar_pedidos()
+
+    def mostrar_pedidos(self):
+        pedidos = listar_pedidos()
+        if not pedidos:
+            messagebox.showinfo("Pedidos", "Nenhum pedido encontrado.")
+            return
+
+        # Criar uma nova janela para exibir os pedidos
+        janela_pedidos = ctk.CTkToplevel(self.root)
+        janela_pedidos.title("Pedidos Realizados")
+        janela_pedidos.geometry("600x400")
+
+        texto_pedidos = ctk.CTkTextbox(janela_pedidos, wrap="word")
+        texto_pedidos.pack(fill="both", expand=True)
+
+        for pedido in pedidos:
+            texto_pedidos.insert("end", f"Número do Pedido: {pedido[1]}\n")
+            texto_pedidos.insert("end", f"Pratos Principais: {pedido[2]}\n")
+            texto_pedidos.insert("end", f"Guarnições: {pedido[3]}\n")
+            texto_pedidos.insert("end", f"Bebidas: {pedido[4]}\n")
+            texto_pedidos.insert("end", f"Economia do Dia: {pedido[5]}\n")
+            texto_pedidos.insert("end", f"Principal: {pedido[6]}\n")
+            texto_pedidos.insert("end", f"Modo de Pagamento: {pedido[7]}\n")
+            texto_pedidos.insert("end", f"Endereço: {pedido[8]}\n")
+            texto_pedidos.insert("end", f"Observações: {pedido[9]}\n")
+            texto_pedidos.insert("end", f"Troco: {pedido[10]}\n")
+            texto_pedidos.insert("end", f"Total: R$ {pedido[11]:.2f}\n")
+            texto_pedidos.insert("end", "-" * 50 + "\n")
 
 if __name__ == "__main__":
     root = ctk.CTk()
