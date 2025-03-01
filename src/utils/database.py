@@ -4,6 +4,8 @@ import sqlite3
 def criar_banco_dados():
     conn = sqlite3.connect('pedidos.db')
     cursor = conn.cursor()
+
+    # Tabela de pedidos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS pedidos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,8 +22,35 @@ def criar_banco_dados():
             total REAL
         )
     ''')
+
+    # Tabela para controle de sequência
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sequencia_pedidos (
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Inicializar a sequência se a tabela estiver vazia
+    cursor.execute('SELECT COUNT(*) FROM sequencia_pedidos')
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('INSERT INTO sequencia_pedidos (ultimo_numero) VALUES (0)')
+
     conn.commit()
     conn.close()
+
+def gerar_numero_pedido():
+    conn = sqlite3.connect('pedidos.db')
+    cursor = conn.cursor()
+
+    # Incrementar o último número de pedido
+    cursor.execute('UPDATE sequencia_pedidos SET ultimo_numero = ultimo_numero + 1')
+    cursor.execute('SELECT ultimo_numero FROM sequencia_pedidos')
+    numero_pedido = cursor.fetchone()[0]
+
+    conn.commit()
+    conn.close()
+
+    return f"PED{numero_pedido:04d}"  # Formato PED0001, PED0002, etc.
 
 def salvar_pedido(pedido, numero_pedido):
     conn = sqlite3.connect('pedidos.db')
@@ -49,7 +78,15 @@ def salvar_pedido(pedido, numero_pedido):
 def listar_pedidos():
     conn = sqlite3.connect('pedidos.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM pedidos')
+    cursor.execute('SELECT * FROM pedidos ORDER BY id DESC')
     pedidos = cursor.fetchall()
     conn.close()
     return pedidos
+
+def buscar_pedido_por_numero(numero_pedido):
+    conn = sqlite3.connect('pedidos.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM pedidos WHERE numero_pedido = ?', (numero_pedido,))
+    pedido = cursor.fetchone()
+    conn.close()
+    return pedido

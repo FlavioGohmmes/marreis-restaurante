@@ -1,7 +1,8 @@
+# src/utils/pdf_generator.py
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-def gerar_pdf(pedidos, filename="pedido.pdf"):
+def gerar_pdf(pedidos, numero_pedido, filename="pedido.pdf"):
     c = canvas.Canvas(filename, pagesize=letter)
     width, height = letter  # Tamanho da página
     margin = 50  # Margem para o conteúdo
@@ -17,6 +18,10 @@ def gerar_pdf(pedidos, filename="pedido.pdf"):
 
     # Título da comanda
     c.drawString(margin, y, "Comanda do Marreis Restaurante")
+    y -= 20
+
+    # Número do pedido
+    c.drawString(margin, y, f"Número do Pedido: {numero_pedido}")
     y -= 20
 
     for i, pedido in enumerate(pedidos):

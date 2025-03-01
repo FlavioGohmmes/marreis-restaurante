@@ -4,6 +4,9 @@ from models.pedido import Pedido
 from utils.pdf_generator import gerar_pdf
 from utils.database import salvar_pedido
 from utils.database import listar_pedidos
+from utils.database import salvar_pedido, gerar_numero_pedido
+from utils.pdf_generator import gerar_pdf
+from utils.database import listar_pedidos, buscar_pedido_por_numero
 import random
 import os
 
@@ -25,7 +28,13 @@ class PedidoApp:
         self.pedidos = []  # Lista para armazenar múltiplos pedidos
         self.num_pedidos = 1  # Número inicial de pedidos
 
+        # Forçar o redimensionamento após a abertura
+        self.root.after(100, self.forcar_tela_cheia)
+
         self.criar_interface()
+
+    def forcar_tela_cheia(self):
+        self.root.state("zoomed")  # Força a janela a permanecer em tela cheia
 
     def criar_interface(self):
         # Frame principal com barra de rolagem
@@ -75,6 +84,10 @@ class PedidoApp:
         # Botão Finalizar Pedido
         btn_finalizar = ctk.CTkButton(self.inner_frame, text="Finalizar Pedido", command=self.finalizar_pedido, fg_color="#4CAF50", hover_color="#45a049")
         btn_finalizar.grid(row=3, column=0, columnspan=3, pady=20, sticky="nsew")
+
+        # Botão para visualizar pedidos
+        btn_visualizar_pedidos = ctk.CTkButton(self.inner_frame, text="Visualizar Pedidos", command=self.mostrar_pedidos, fg_color="#FFA500", hover_color="#FF8C00")
+        btn_visualizar_pedidos.grid(row=4, column=0, columnspan=3, pady=20, sticky="nsew")
 
         # Configuração do redimensionamento
         self.root.bind("<Configure>", self.on_resize)
@@ -239,15 +252,15 @@ class PedidoApp:
 
         confirmar = messagebox.askyesno("Confirmar", "Deseja finalizar a comanda?")
         if confirmar:
-            # Gerar um número de pedido único
-            numero_pedido = f"PED{random.randint(1000, 9999)}"
+            # Gerar um número de pedido sequencial
+            numero_pedido = gerar_numero_pedido()
 
             # Salvar o pedido no banco de dados
             for pedido in self.pedidos:
                 salvar_pedido(pedido, numero_pedido)
 
             # Gerar o PDF
-            gerar_pdf(self.pedidos)
+            gerar_pdf(self.pedidos, numero_pedido)
             messagebox.showinfo("Sucesso", f"Comanda finalizada e PDF gerado com sucesso! Número do pedido: {numero_pedido}")
             os.startfile("pedido.pdf")
             self.limpar_campos()
@@ -267,26 +280,61 @@ class PedidoApp:
             return
 
         # Criar uma nova janela para exibir os pedidos
-        janela_pedidos = ctk.CTkToplevel(self.root)
-        janela_pedidos.title("Pedidos Realizados")
-        janela_pedidos.geometry("600x400")
+        self.janela_pedidos = ctk.CTkToplevel(self.root)  # Armazenar a referência da janela
+        self.janela_pedidos.title("Pedidos Realizados")
+        self.janela_pedidos.geometry("800x600")
 
-        texto_pedidos = ctk.CTkTextbox(janela_pedidos, wrap="word")
-        texto_pedidos.pack(fill="both", expand=True)
+        # Frame para busca
+        frame_busca = ctk.CTkFrame(self.janela_pedidos)
+        frame_busca.pack(fill="x", padx=10, pady=10)
 
+        ctk.CTkLabel(frame_busca, text="Buscar por Número do Pedido:").pack(side="left", padx=5)
+        self.entry_busca = ctk.CTkEntry(frame_busca, width=150)
+        self.entry_busca.pack(side="left", padx=5)
+        btn_buscar = ctk.CTkButton(frame_busca, text="Buscar", command=self.buscar_pedido)
+        btn_buscar.pack(side="left", padx=5)
+
+        # Área de texto para exibir os pedidos
+        self.texto_pedidos = ctk.CTkTextbox(self.janela_pedidos, wrap="word")
+        self.texto_pedidos.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Exibir todos os pedidos
+        self.exibir_pedidos(pedidos)
+
+    def exibir_pedidos(self, pedidos):
+        self.texto_pedidos.delete("1.0", "end")
         for pedido in pedidos:
-            texto_pedidos.insert("end", f"Número do Pedido: {pedido[1]}\n")
-            texto_pedidos.insert("end", f"Pratos Principais: {pedido[2]}\n")
-            texto_pedidos.insert("end", f"Guarnições: {pedido[3]}\n")
-            texto_pedidos.insert("end", f"Bebidas: {pedido[4]}\n")
-            texto_pedidos.insert("end", f"Economia do Dia: {pedido[5]}\n")
-            texto_pedidos.insert("end", f"Principal: {pedido[6]}\n")
-            texto_pedidos.insert("end", f"Modo de Pagamento: {pedido[7]}\n")
-            texto_pedidos.insert("end", f"Endereço: {pedido[8]}\n")
-            texto_pedidos.insert("end", f"Observações: {pedido[9]}\n")
-            texto_pedidos.insert("end", f"Troco: {pedido[10]}\n")
-            texto_pedidos.insert("end", f"Total: R$ {pedido[11]:.2f}\n")
-            texto_pedidos.insert("end", "-" * 50 + "\n")
+            self.texto_pedidos.insert("end", f"Número do Pedido: {pedido[1]}\n")
+            self.texto_pedidos.insert("end", f"Pratos Principais: {pedido[2]}\n")
+            self.texto_pedidos.insert("end", f"Guarnições: {pedido[3]}\n")
+            self.texto_pedidos.insert("end", f"Bebidas: {pedido[4]}\n")
+            self.texto_pedidos.insert("end", f"Economia do Dia: {pedido[5]}\n")
+            self.texto_pedidos.insert("end", f"Principal: {pedido[6]}\n")
+            self.texto_pedidos.insert("end", f"Modo de Pagamento: {pedido[7]}\n")
+            self.texto_pedidos.insert("end", f"Endereço: {pedido[8]}\n")
+            self.texto_pedidos.insert("end", f"Observações: {pedido[9]}\n")
+            self.texto_pedidos.insert("end", f"Troco: {pedido[10]}\n")
+            self.texto_pedidos.insert("end", f"Total: R$ {pedido[11]:.2f}\n")
+            self.texto_pedidos.insert("end", "-" * 50 + "\n")
+
+    def buscar_pedido(self):
+        # Verificar se a janela de pedidos ainda está aberta
+        if not hasattr(self, 'janela_pedidos') or not self.janela_pedidos.winfo_exists():
+            messagebox.showwarning("Erro", "A janela de pedidos foi fechada.")
+            return
+
+        # Obter o número do pedido
+        numero_pedido = self.entry_busca.get().strip()
+        if not numero_pedido:
+            messagebox.showwarning("Busca", "Informe o número do pedido.")
+            return
+
+        # Buscar o pedido no banco de dados
+        pedido = buscar_pedido_por_numero(numero_pedido)
+        if pedido:
+            self.exibir_pedidos([pedido])
+        else:
+            messagebox.showinfo("Busca", f"Nenhum pedido encontrado com o número {numero_pedido}.")
 
 if __name__ == "__main__":
     root = ctk.CTk()
