@@ -42,13 +42,15 @@ class Pedido:
         self.bebidas = [b for b in self.bebidas if b["nome"] != bebida]
 
     def adicionar_economia_dia(self, tamanho):
-        self.economia_dia = {"tamanho": tamanho, "valor": 12 if tamanho == "P" else 18}
+        self.economia_dia = {"tamanho": tamanho,
+                             "valor": 12 if tamanho == "P" else 18}
 
     def remover_economia_dia(self):
         self.economia_dia = {"tamanho": None, "valor": 0}
 
     def adicionar_principal(self, tamanho):
-        self.principal = {"tamanho": tamanho, "valor": 18 if tamanho == "P" else 20}
+        self.principal = {"tamanho": tamanho,
+                          "valor": 18 if tamanho == "P" else 20}
 
     def remover_principal(self):
         self.principal = {"tamanho": None, "valor": 0}
